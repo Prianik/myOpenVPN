@@ -97,7 +97,7 @@ function initialCheck() {
 # Функция запроса параметров установки
 function installQuestions() {
     echo "Добро пожаловать в установщик OpenVPN!"
-    echo "Репозиторий: https://github.com/angristan/openvpn-install"
+    echo "Репозиторий: https://github.com/Prianik/myOpenVPN"
     echo ""
 
     echo "Перед началом установки нужно ответить на несколько вопросов."
