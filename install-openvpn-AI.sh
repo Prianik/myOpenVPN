@@ -781,9 +781,12 @@ function removeOpenVPN() {
 
         find /home/ -maxdepth 2 -name "*.ovpn" -delete
         find /root/ -maxdepth 1 -name "*.ovpn" -delete
-        rm -rf /etc/openvpn /usr/share/doc/openvpn* /etc/sysctl.d/99-openvpn.conf /var/log/openvpn
-        rm -f /usr/local/bin/vpn-stat /usr/local/bin/vpn-user
-
+        rm -rf /etc/openvpn /usr/share/doc/openvpn*
+        rm -rf /etc/sysctl.d/99-openvpn.conf
+        rm -rf /var/log/openvpn
+        rm -f /usr/local/bin/vpn-stat
+        rm -f /usr/local/bin/vpn-user
+        
         echo "OpenVPN удален!"
     else
         echo "Удаление отменено!"
