@@ -59,7 +59,14 @@ ln -s ${ServerDir}/cmd/install/revokeClient.sh ${ServerDir}/revokeClient
 ln -s ${ServerDir}/cmd/vpn-stat.sh /usr/local/bin/vpn-stat
 ln -s ${ServerDir}/cmd/vpn-user.sh /usr/local/bin/vpn-user
 
-
+# Проверяем, есть ли локаль ru_RU.UTF-8 в списке доступных
+if locale -a | grep -q "ru_RU.utf8"; then
+    echo "Локаль ru_RU.UTF-8 уже доступна"
+else
+    echo "Локаль ru_RU.UTF-8 не найдена, запускаем настройку..."
+    sudo dpkg-reconfigure locales
+    export LANG=ru_RU.UTF-8
+fi
 
 
 
