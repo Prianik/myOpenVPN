@@ -2,10 +2,8 @@
 
 # Путь к файлу index.txt
 INDEX_FILE="/etc/openvpn/easy-rsa/pki/index.txt"
-
 # Путь к файлу user-vpn.txt
 USER_VPN_FILE="/etc/openvpn/cmd/user-vpn.txt"
-
 ServerDir=/etc/openvpn
 homeDir=${ServerDir}/_OpenVPN_KEY
 CCD=$(cat ${ServerDir}/server.conf  | grep client-config-dir | awk '{print $2}')
@@ -16,13 +14,11 @@ echo "" >>  $CLIENTCONECT
 chmod  666  $CLIENTCONECT
 chmod  666 $STATUSLOG
 
-
 # Резервная копия и Очистка файла user-vpn.txt (если он уже существует)
 if [  -f "$USER_VPN_FILE" ]; then
 	cp "$USER_VPN_FILE" "$USER_VPN_FILE.bak"
 	> "$USER_VPN_FILE"
 fi
-
 
 # Парсинг index.txt
 while read -r line; do
@@ -48,10 +44,7 @@ sed -i '/^$/d' "$CLIENTCONECT"
 # Сортировка файла user-vpn.txt по возрастанию
 sort -o "$USER_VPN_FILE" "$USER_VPN_FILE"
 chmod  666 "$USER_VPN_FILE"
-
 echo "Файл $USER_VPN_FILE успешно создан."
-
-
 
 if [ ! -f "${ServerDir}/firma.txt" ]; then
 	read -rp "Enter the company name: " FIRMA
