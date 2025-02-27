@@ -1,98 +1,142 @@
 #!/bin/bash
 
+# Отключаем некоторые предупреждения shellcheck для совместимости с оригинальным скриптом
 # shellcheck disable=SC1091,SC2164,SC2034,SC1072,SC1073,SC1009
-# Secure OpenVPN server installer for Debian, Ubuntu, CentOS, Amazon Linux 2, Fedora, Oracle Linux 8, Arch Linux, Rocky Linux and AlmaLinux.
-# https://github.com/angristan/openvpn-install
 
+# Определение путей и переменных
+SERVER_DIR="/etc/openvpn"                         # Основная директория OpenVPN
+USER_VPN_FILE="${SERVER_DIR}/cmd/user-vpn.txt"    # Файл со списком активных VPN-пользователей
+HOME_DIR="${SERVER_DIR}/_OpenVPN_KEY"             # Директория для хранения ключей и .ovpn файлов
+CCD=$(grep "client-config-dir" "${SERVER_DIR}/server.conf" | awk '{print $2}')  # Путь к client-config-dir
+PASS=1                                            # По умолчанию сертификат без пароля
+CLIENT="$1"                                       # Имя клиента из аргумента командной строки
 
-ServerDir=/etc/openvpn
-USER_VPN_FILE="/etc/openvpn/cmd/user-vpn.txt"
-homeDir=${ServerDir}/_OpenVPN_KEY
-CCD=$(cat ${ServerDir}/server.conf  | grep client-config-dir | awk '{print $2}')
-PASS=1
-CLIENT=$1
+# Проверка на наличие server.conf
+if [ ! -f "${SERVER_DIR}/server.conf" ]; then
+    echo "Ошибка: Файл ${SERVER_DIR}/server.conf не найден."
+    exit 1
+fi
 
+# Запрос имени клиента, если не указано в аргументах
 echo ""
-echo "Tell me a name for the client."
-echo "The name must consist of alphanumeric character. It may also include an underscore or a dash."
-until [[ $CLIENT =~ ^[a-zA-Z0-9._-]+$ ]]; do
-	read -rp "Client name: " -e CLIENT
+echo "Укажите имя для клиента."
+echo "Имя должно состоять из букв, цифр, символов '_' или '-'."
+until [[ "${CLIENT}" =~ ^[a-zA-Z0-9._-]+$ ]]; do
+    read -rp "Имя клиента: " -e CLIENT
 done
 
-if [ ! -d "${homeDir}" ]; then
-        mkdir ${homeDir}
+# Создание директории для ключей, если её нет
+if [ ! -d "${HOME_DIR}" ]; then
+    mkdir -p "${HOME_DIR}" || { echo "Ошибка: Не удалось создать директорию ${HOME_DIR}"; exit 1; }
 fi
 
-CLIENTEXISTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c -E "/CN=$CLIENT\$")
-if [[ $CLIENTEXISTS == '1' ]]; then
-	echo ""
-	echo "The specified client CN was already found in easy-rsa, please choose another name."
-	exit
-else
-	cd /etc/openvpn/easy-rsa/ || return
-	case $PASS in
-	1)
-		EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full "$CLIENT" nopass
-		;;
-	2)
-		echo "⚠️ You will be asked for the client password below ⚠️"
-		EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full "$CLIENT"
-		;;
-	esac
-		echo "Client $CLIENT added."
+# Проверка на существование клиента в easy-rsa
+CLIENT_EXISTS=$(tail -n +2 "${SERVER_DIR}/easy-rsa/pki/index.txt" | grep -c -E "/CN=${CLIENT}\$")
+if [ "${CLIENT_EXISTS}" -eq 1 ]; then
+    echo ""
+    echo "Ошибка: Клиент с именем ${CLIENT} уже существует в easy-rsa. Выберите другое имя."
+    exit 1
 fi
 
-# Determine if we use tls-auth or tls-crypt
-if grep -qs "^tls-crypt" /etc/openvpn/server.conf; then
-	TLS_SIG="1"
-elif grep -qs "^tls-auth" /etc/openvpn/server.conf; then
-	TLS_SIG="2"
+# Генерация сертификата клиента
+cd "${SERVER_DIR}/easy-rsa/" || { echo "Ошибка: Не удалось перейти в ${SERVER_DIR}/easy-rsa/"; exit 1; }
+case "${PASS}" in
+    1)
+        EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full "${CLIENT}" nopass || {
+            echo "Ошибка: Не удалось создать сертификат для ${CLIENT}";
+            exit 1;
+        }
+        ;;
+    2)
+        echo "⚠️ Вам будет предложено ввести пароль для клиента ниже ⚠️"
+        EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full "${CLIENT}" || {
+            echo "Ошибка: Не удалось создать сертификат для ${CLIENT}";
+            exit 1;
+        }
+        ;;
+esac
+echo "Клиент ${CLIENT} успешно добавлен."
+
+# Определение типа TLS (tls-auth или tls-crypt)
+if grep -qs "^tls-crypt" "${SERVER_DIR}/server.conf"; then
+    TLS_SIG="1"
+elif grep -qs "^tls-auth" "${SERVER_DIR}/server.conf"; then
+    TLS_SIG="2"
 fi
 
-# Generates the custom client.ovpn
-cp /etc/openvpn/client-template.txt "$homeDir/$CLIENT.ovpn"
+# Генерация конфигурационного файла .ovpn для клиента
+OVPN_FILE="${HOME_DIR}/${CLIENT}.ovpn"
+if [ ! -f "${SERVER_DIR}/client-template.txt" ]; then
+    echo "Ошибка: Шаблон ${SERVER_DIR}/client-template.txt не найден."
+    exit 1
+fi
+
+cp "${SERVER_DIR}/client-template.txt" "${OVPN_FILE}" || {
+    echo "Ошибка: Не удалось скопировать шаблон в ${OVPN_FILE}";
+    exit 1;
+}
+
 {
-	echo "<ca>"
-	cat "/etc/openvpn/easy-rsa/pki/ca.crt"
-	echo "</ca>"
+    echo "<ca>"
+    cat "${SERVER_DIR}/easy-rsa/pki/ca.crt" || { echo "Ошибка: Не удалось прочитать ca.crt"; exit 1; }
+    echo "</ca>"
 
-	echo "<cert>"
-	awk '/BEGIN/,/END CERTIFICATE/' "/etc/openvpn/easy-rsa/pki/issued/$CLIENT.crt"
-	echo "</cert>"
-	
- 	echo "<key>"
-	cat "/etc/openvpn/easy-rsa/pki/private/$CLIENT.key"
-	echo "</key>"
+    echo "<cert>"
+    awk '/BEGIN/,/END CERTIFICATE/' "${SERVER_DIR}/easy-rsa/pki/issued/${CLIENT}.crt" || {
+        echo "Ошибка: Не удалось извлечь сертификат ${CLIENT}.crt";
+        exit 1;
+    }
+    echo "</cert>"
 
-	case $TLS_SIG in
-	1)
-		echo "<tls-crypt>"
-		cat /etc/openvpn/tls-crypt.key
-		echo "</tls-crypt>"
-		;;
-	2)
-		echo "key-direction 1"
-		echo "<tls-auth>"
-		cat /etc/openvpn/tls-auth.key
-		echo "</tls-auth>"
-		;;
-	esac
-} >>"$homeDir/$CLIENT.ovpn"
+    echo "<key>"
+    cat "${SERVER_DIR}/easy-rsa/pki/private/${CLIENT}.key" || {
+        echo "Ошибка: Не удалось прочитать ключ ${CLIENT}.key";
+        exit 1;
+    }
+    echo "</key>"
+
+    case "${TLS_SIG}" in
+        1)
+            echo "<tls-crypt>"
+            cat "${SERVER_DIR}/tls-crypt.key" || { echo "Ошибка: Не удалось прочитать tls-crypt.key"; exit 1; }
+            echo "</tls-crypt>"
+            ;;
+        2)
+            echo "key-direction 1"
+            echo "<tls-auth>"
+            cat "${SERVER_DIR}/tls-auth.key" || { echo "Ошибка: Не удалось прочитать tls-auth.key"; exit 1; }
+            echo "</tls-auth>"
+            ;;
+    esac
+} >> "${OVPN_FILE}"
 
 echo ""
-echo "The configuration file has been written to $homeDir/$CLIENT.ovpn."
-echo "Download the .ovpn file and import it in your OpenVPN client."
+echo "Конфигурационный файл записан в ${OVPN_FILE}."
+echo "Скачайте файл .ovpn и импортируйте его в ваш OpenVPN-клиент."
 
+# Добавление клиента в список активных пользователей
 echo "------------------------------------------------------------------------------"
-echo "$CLIENT 1" >>  "$USER_VPN_FILE"
+echo "${CLIENT} 1" >> "${USER_VPN_FILE}" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
 
-# удаляю пустые строки
-sed -i '/^$/d' "$USER_VPN_FILE"
+# Удаление пустых строк из user-vpn.txt
+sed -i '/^$/d' "${USER_VPN_FILE}" || { echo "Ошибка обработки ${USER_VPN_FILE}"; exit 1; }
 
-# Сортировка файла user-vpn.txt по возрастанию
-sort -o "$USER_VPN_FILE" "$USER_VPN_FILE"
+# Сортировка файла user-vpn.txt
+sort -o "${USER_VPN_FILE}" "${USER_VPN_FILE}" || { echo "Ошибка сортировки ${USER_VPN_FILE}"; exit 1; }
 
-echo ...Copy _default CCD to $CLIENT .........
-cp $CCD/_default /$CCD/$CLIENT
-cat $CCD/$CLIENT
+# Копирование стандартной конфигурации CCD для клиента
+echo "...Копирование _default CCD для ${CLIENT}..."
+if [ -f "${CCD}/_default" ]; then
+    cp "${CCD}/_default" "${CCD}/${CLIENT}" || {
+        echo "Ошибка: Не удалось скопировать _default в ${CCD}/${CLIENT}";
+        exit 1;
+    }
+    cat "${CCD}/${CLIENT}"
+else
+    echo "Предупреждение: Файл ${CCD}/_default не найден, CCD для ${CLIENT} не создан."
+fi
 echo "------------------------------------------------------------------------------"
+
+# Успешное завершение
+echo "Скрипт успешно выполнен."
+exit 0
