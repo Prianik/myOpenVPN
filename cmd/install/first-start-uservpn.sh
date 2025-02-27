@@ -52,11 +52,10 @@ if [ ! -f "${ServerDir}/firma.txt" ]; then
 	echo "File  ${ServerDir}/firma.txt create"
 fi
 
-sudo ln -s ${ServerDir}/cmd/install/newClient.sh ${ServerDir}/newClient
-sudo ln -s ${ServerDir}/cmd/install/revokeClient.sh ${ServerDir}/revokeClient
-
-sudo ln ${ServerDir}/cmd/vpn-stat.sh /usr/local/bin/vpn-stat
-sudo ln ${ServerDir}/cmd/vpn-user.sh /usr/local/bin/vpn-user
+ln -s ${ServerDir}/cmd/install/newClient.sh ${ServerDir}/newClient
+ln -s ${ServerDir}/cmd/install/revokeClient.sh ${ServerDir}/revokeClient
+ln -s ${ServerDir}/cmd/vpn-stat.sh /usr/local/bin/vpn-stat
+ln -s ${ServerDir}/cmd/vpn-user.sh /usr/local/bin/vpn-user
 
 
 
