@@ -46,12 +46,14 @@ sort -o "$USER_VPN_FILE" "$USER_VPN_FILE"
 chmod  666 "$USER_VPN_FILE"
 echo "Файл $USER_VPN_FILE успешно создан."
 
+# задаем название фирмы для отчетов
 if [ ! -f "${ServerDir}/firma.txt" ]; then
 	read -rp "Enter the company name: " FIRMA
         echo "${FIRMA}" >  "${ServerDir}/firma.txt"
 	echo "File  ${ServerDir}/firma.txt create"
 fi
 
+# создаю ссылки
 ln -s ${ServerDir}/cmd/install/newClient.sh ${ServerDir}/newClient
 ln -s ${ServerDir}/cmd/install/revokeClient.sh ${ServerDir}/revokeClient
 ln -s ${ServerDir}/cmd/vpn-stat.sh /usr/local/bin/vpn-stat
