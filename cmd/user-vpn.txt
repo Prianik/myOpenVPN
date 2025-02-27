@@ -1,3 +1,0 @@
-haribi.i 1
-sector 1
-server 1
