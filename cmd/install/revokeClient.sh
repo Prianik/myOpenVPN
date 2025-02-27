@@ -1,56 +1,124 @@
 #!/bin/bash
+
+# --------------------------------------------------------------------
+# Описание: Скрипт для отзыва сертификата клиента OpenVPN
+# Источник: Основано на https://github.com/angristan/openvpn-install
+# Автор: Grok 3 (xAI), отформатировано и прокомментировано 27.02.2025
+# Зависимости: bash, awk, grep, sed, sort, easy-rsa
+# --------------------------------------------------------------------
+
+# Отключаем некоторые предупреждения shellcheck для совместимости с оригинальным скриптом
 # shellcheck disable=SC1091,SC2164,SC2034,SC1072,SC1073,SC1009
 
-# Secure OpenVPN server installer for Debian, Ubuntu, CentOS, Amazon Linux 2, Fedora, Oracle Linux 8, Arch Linux, Rocky Linux and AlmaLinux.
-# https://github.com/angristan/openvpn-install
-# Путь к файлу user-vpn.txt
+# Определение путей и переменных
+SERVER_DIR="/etc/openvpn"                         # Основная директория OpenVPN
+USER_VPN_FILE="${SERVER_DIR}/cmd/user-vpn.txt"    # Файл со списком активных VPN-пользователей
+HOME_DIR="${SERVER_DIR}/_OpenVPN_KEY"             # Директория для хранения ключей и .ovpn файлов
+CCD=$(grep "client-config-dir" "${SERVER_DIR}/server.conf" | awk '{print $2}')  # Путь к client-config-dir
+INDEX_FILE="${SERVER_DIR}/easy-rsa/pki/index.txt" # Файл индекса сертификатов
+PASS=1                                            # Не используется в этом скрипте, оставлено для совместимости
+CLIENT="${1}"                                     # Имя клиента из аргумента командной строки (опционально)
 
-ServerDir=/etc/openvpn
-USER_VPN_FILE="/etc/openvpn/cmd/user-vpn.txt"
-homeDir=${ServerDir}/_OpenVPN_KEY
-CCD=$(cat ${ServerDir}/server.conf  | grep client-config-dir | awk '{print $2}')
-PASS=1
-CLIENT=$1
-
-NUMBEROFCLIENTS=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep -c "^V")
-if [[ $NUMBEROFCLIENTS == '0' ]]; then
-	echo ""
-	echo "You have no existing clients!"
-	exit 1
+# Проверка на наличие server.conf
+if [ ! -f "${SERVER_DIR}/server.conf" ]; then
+    echo "Ошибка: Файл ${SERVER_DIR}/server.conf не найден."
+    exit 1
 fi
 
+# Проверка на наличие index.txt
+if [ ! -f "${INDEX_FILE}" ]; then
+    echo "Ошибка: Файл ${INDEX_FILE} не найден."
+    exit 1
+fi
+
+# Подсчет количества активных клиентов
+NUMBER_OF_CLIENTS=$(tail -n +2 "${INDEX_FILE}" | grep -c "^V")
+if [ "${NUMBER_OF_CLIENTS}" -eq 0 ]; then
+    echo ""
+    echo "У вас нет существующих клиентов!"
+    exit 1
+fi
+
+# Вывод списка активных клиентов и выбор для отзыва
 echo ""
-echo "Select the existing client certificate you want to revoke"
-tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | nl -s ') '
-until [[ $CLIENTNUMBER -ge 1 && $CLIENTNUMBER -le $NUMBEROFCLIENTS ]]; do
-	if [[ $CLIENTNUMBER == '1' ]]; then
-		read -rp "Select one client [1]: " CLIENTNUMBER
-	else
-		read -rp "Select one client [1-$NUMBEROFCLIENTS]: " CLIENTNUMBER
-	fi
+echo "Выберите сертификат клиента для отзыва:"
+tail -n +2 "${INDEX_FILE}" | grep "^V" | cut -d '=' -f 2 | nl -s ') '
+
+until [[ "${CLIENTNUMBER}" -ge 1 && "${CLIENTNUMBER}" -le "${NUMBER_OF_CLIENTS}" ]]; do
+    if [ "${NUMBER_OF_CLIENTS}" -eq 1 ]; then
+        read -rp "Выберите клиента [1]: " CLIENTNUMBER
+    else
+        read -rp "Выберите клиента [1-${NUMBER_OF_CLIENTS}]: " CLIENTNUMBER
+    fi
 done
-CLIENT=$(tail -n +2 /etc/openvpn/easy-rsa/pki/index.txt | grep "^V" | cut -d '=' -f 2 | sed -n "$CLIENTNUMBER"p)
-cd /etc/openvpn/easy-rsa/ || return
-./easyrsa --batch revoke "$CLIENT"
-EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl
-rm -f /etc/openvpn/crl.pem
-cp /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn/crl.pem
-chmod 644 /etc/openvpn/crl.pem
 
-find /home/ -maxdepth 2 -name "$CLIENT.ovpn" -delete
-rm -f "/root/$CLIENT.ovpn"
-sed -i "/^$CLIENT,.*/d" /etc/openvpn/ipp.txt
-cp /etc/openvpn/easy-rsa/pki/index.txt{,.bk}
+# Извлечение имени клиента по номеру
+CLIENT=$(tail -n +2 "${INDEX_FILE}" | grep "^V" | cut -d '=' -f 2 | sed -n "${CLIENTNUMBER}p")
 
-rm -f $homeDir/$CLIENT.ovpn 
-rm -f $CCD/$CLIENT
-sed -i "/^$CLIENT*/d" "$USER_VPN_FILE"
+# Переход в директорию easy-rsa для работы с сертификатами
+cd "${SERVER_DIR}/easy-rsa/" || { echo "Ошибка: Не удалось перейти в ${SERVER_DIR}/easy-rsa/"; exit 1; }
 
-# удаляю пустые строки
-sed -i '/^$/d' "$USER_VPN_FILE"
+# Отзыв сертификата клиента
+./easyrsa --batch revoke "${CLIENT}" || {
+    echo "Ошибка: Не удалось отозвать сертификат для ${CLIENT}";
+    exit 1;
+}
 
-# Сортировка файла user-vpn.txt по возрастанию
-sort -o "$USER_VPN_FILE" "$USER_VPN_FILE"
+# Генерация нового CRL (Certificate Revocation List)
+EASYRSA_CRL_DAYS=3650 ./easyrsa gen-crl || {
+    echo "Ошибка: Не удалось сгенерировать CRL";
+    exit 1;
+}
 
+# Обновление файла crl.pem на сервере
+rm -f "${SERVER_DIR}/crl.pem" || { echo "Ошибка: Не удалось удалить старый ${SERVER_DIR}/crl.pem"; exit 1; }
+cp "${SERVER_DIR}/easy-rsa/pki/crl.pem" "${SERVER_DIR}/crl.pem" || {
+    echo "Ошибка: Не удалось скопировать новый crl.pem";
+    exit 1;
+}
+chmod 644 "${SERVER_DIR}/crl.pem"  # Установка прав rw-r--r--
+
+# Удаление файлов клиента
+find /home/ -maxdepth 2 -name "${CLIENT}.ovpn" -delete 2>/dev/null
+rm -f "/root/${CLIENT}.ovpn" 2>/dev/null
+rm -f "${HOME_DIR}/${CLIENT}.ovpn" 2>/dev/null
+rm -f "${CCD}/${CLIENT}" 2>/dev/null
+
+# Удаление записи клиента из ipp.txt
+if [ -f "${SERVER_DIR}/ipp.txt" ]; then
+    sed -i "/^${CLIENT},.*/d" "${SERVER_DIR}/ipp.txt" || {
+        echo "Ошибка: Не удалось обновить ${SERVER_DIR}/ipp.txt";
+        exit 1;
+    }
+fi
+
+# Создание резервной копии index.txt
+cp "${INDEX_FILE}" "${INDEX_FILE}.bk" || {
+    echo "Ошибка: Не удалось создать резервную копию ${INDEX_FILE}";
+    exit 1;
+}
+
+# Удаление клиента из user-vpn.txt
+if [ -f "${USER_VPN_FILE}" ]; then
+    sed -i "/^${CLIENT}.*/d" "${USER_VPN_FILE}" || {
+        echo "Ошибка: Не удалось обновить ${USER_VPN_FILE}";
+        exit 1;
+    }
+
+    # Удаление пустых строк
+    sed -i '/^$/d' "${USER_VPN_FILE}" || {
+        echo "Ошибка: Не удалось удалить пустые строки из ${USER_VPN_FILE}";
+        exit 1;
+    }
+
+    # Сортировка файла user-vpn.txt
+    sort -o "${USER_VPN_FILE}" "${USER_VPN_FILE}" || {
+        echo "Ошибка: Не удалось отсортировать ${USER_VPN_FILE}";
+        exit 1;
+    }
+fi
+
+# Успешное завершение
 echo ""
-echo "Certificate for client $CLIENT revoked."
+echo "Сертификат клиента ${CLIENT} успешно отозван."
+exit 0
