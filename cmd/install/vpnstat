@@ -1,0 +1,18 @@
+/var/log/openvpn/client-connect.log {
+	monthly
+#	daily
+#	weekly
+	rotate 12
+	compress
+	delaycompress
+	missingok
+	notifempty
+	create 777 root root
+        sharedscripts
+        prerotate
+		systemctl stop openvpn
+	endscript
+        postrotate
+                systemctl start openvpn
+	endscript
+}
