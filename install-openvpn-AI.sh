@@ -544,6 +544,12 @@ tls-version-min 1.2
 tls-cipher $CC_CIPHER
 client-config-dir /etc/openvpn/ccd
 status /var/log/openvpn/status.log
+#
+#script-security 2
+#client-connect /etc/openvpn/cmd/up.sh
+#client-disconnect /etc/openvpn/cmd/down.sh
+#
+
 verb 3"
     } > /etc/openvpn/server.conf || { echo "Ошибка создания server.conf"; exit 1; }
 
@@ -643,7 +649,7 @@ EOF
     # Создание шаблона клиента
     {
         echo "client"
-        [[ "$PROTOCOL" == "udp" ]] && echo "proto udp\nexplicit-exit-notify" || echo "proto tcp-client"
+        [[ "$PROTOCOL" == "udp" ]] && echo -e "proto udp\nexplicit-exit-notify" || echo "proto tcp-client"
         echo "remote $IP $PORT
 dev tun
 resolv-retry infinite
@@ -658,6 +664,7 @@ cipher $CIPHER
 tls-client
 tls-version-min 1.2
 tls-cipher $CC_CIPHER
+route-metric 10
 verb 3"
         [[ "$COMPRESSION_ENABLED" == "y" ]] && echo "compress $COMPRESSION_ALG"
     } > /etc/openvpn/client-template.txt 
