@@ -1,17 +1,9 @@
 #!/bin/bash
 
-
-#chmod 777 /var/log/openvpn/client-connect.log
-
-#echo -e "$(date +%Y-%m-%d) $(date +%H:%M:%S) $common_name $trusted_ip ---> $ifconfig_pool_remote_ip UP $script_type $bytes_received $bytes_send"   >> /var/log/openvpn/client-connect.log
-#exit 0
-
 # Путь к файлу со списком пользователей
 USER_LIST="/etc/openvpn/cmd/user-vpn.txt"
-
 # Логирование
 LOG_FILE="/var/log/openvpn/client-connect.log"
-
 # Получаем Common Name (имя пользователя) из переменной окружения
 CLIENT_NAME="$common_name"
 
