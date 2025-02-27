@@ -792,20 +792,18 @@ function removeOpenVPN() {
 
 # Функция управления меню
 function manageMenu() {
-    echo "Добро пожаловать в OpenVPN-install!"
-    echo "Репозиторий: https://github.com/angristan/openvpn-install"
     echo "OpenVPN уже установлен."
     echo "Выберите действие:"
-    echo "   1) Добавить нового пользователя"
-    echo "   2) Отозвать пользователя"
+#    echo "   1) Добавить нового пользователя"
+#    echo "   2) Отозвать пользователя"
     echo "   3) Удалить OpenVPN"
     echo "   4) Выход"
     until [[ "$MENU_OPTION" =~ ^[1-4]$ ]]; do
         read -rp "Выберите опцию [1-4]: " MENU_OPTION
     done
     case "$MENU_OPTION" in
-        1) newClient ;;
-        2) revokeClient ;;
+ #       1) newClient ;;
+ #       2) revokeClient ;;
         3) removeOpenVPN ;;
         4) exit 0 ;;
     esac
