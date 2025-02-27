@@ -948,6 +948,9 @@ function removeOpenVPN() {
         rm -f /etc/sysctl.d/99-openvpn.conf
         rm -rf /var/log/openvpn
 
+        rm -rf  /usr/local/bin/vpn-stat
+        rm -rf /usr/local/bin/vpn-user
+
         echo ""
         echo "OpenVPN removed!"
     else
