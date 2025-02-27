@@ -1,9 +1,6 @@
 #!/bin/bash
 
 # --------------------------------------------------------------------
-# Описание: Установочный скрипт OpenVPN для различных дистрибутивов Linux
-# Источник: https://github.com/angristan/openvpn-install
-# Автор: Grok 3 (xAI), отформатировано и прокомментировано 27.02.2025
 # Зависимости: bash, curl, wget, openvpn, easy-rsa, iptables, systemd
 # --------------------------------------------------------------------
 
@@ -602,7 +599,7 @@ ip6tables -I INPUT 1 -i tun0 -j ACCEPT
 ip6tables -I FORWARD 1 -i $NIC -o tun0 -j ACCEPT
 ip6tables -I FORWARD 1 -i tun0 -o $NIC -j ACCEPT
 ip6tables -I INPUT 1 -i $NIC -p $PROTOCOL --dport $PORT -j ACCEPT"
-    } > /etc/iptables/add-openvpn-rules.sh || { echo "Ошибка создания правил iptables"; exit 1; }
+    } > /etc/iptables/add-openvpn-rules.sh 
 
     {
         echo "#!/bin/sh"
@@ -616,7 +613,7 @@ ip6tables -D INPUT -i tun0 -j ACCEPT
 ip6tables -D FORWARD -i $NIC -o tun0 -j ACCEPT
 ip6tables -D FORWARD -i tun0 -o $NIC -j ACCEPT
 ip6tables -D INPUT -i $NIC -p $PROTOCOL --dport $PORT -j ACCEPT"
-    } > /etc/iptables/rm-openvpn-rules.sh || { echo "Ошибка создания правил удаления iptables"; exit 1; }
+    } > /etc/iptables/rm-openvpn-rules.sh 
 
     chmod +x /etc/iptables/add-openvpn-rules.sh /etc/iptables/rm-openvpn-rules.sh
 
@@ -663,16 +660,16 @@ tls-version-min 1.2
 tls-cipher $CC_CIPHER
 verb 3"
         [[ "$COMPRESSION_ENABLED" == "y" ]] && echo "compress $COMPRESSION_ALG"
-    } > /etc/openvpn/client-template.txt || { echo "Ошибка создания шаблона клиента"; exit 1; }
+    } > /etc/openvpn/client-template.txt 
 
-    newClient
+    echo "Все установлено"
     echo "Для добавления новых клиентов запустите скрипт снова!"
 }
 
 # Функция создания нового клиента
 function newClient() {
     echo "Укажите имя клиента (только буквы, цифры, _ или -):"
-    until [[ "$CLIENT" =~ ^[a-zA-Z0-9_-]+$ ]]; do
+    until [[ "$CLIENT" =~ ^[a-zA-Z0-9._-]+$ ]]; do
         read -rp "Имя клиента: " -e CLIENT
     done
 
@@ -686,10 +683,12 @@ function newClient() {
     EASYRSA_CERT_EXPIRE=3650 ./easyrsa --batch build-client-full "$CLIENT" nopass || { echo "Ошибка создания клиента"; exit 1; }
     echo "Клиент $CLIENT добавлен."
 
-    homeDir="/etc/openvpn/_OpenVPN_KEY"
-    mkdir -p "$homeDir" || { echo "Ошибка создания директории $homeDir"; exit 1; }
+# Создание директории для ключей, если её нет
+if [ ! -d "/etc/openvpn/_OpenVPN_KEY" ]; then
+    mkdir -p "/etc/openvpn/_OpenVPN_KEY"
+fi
 
-    TLS_SIG=$(grep -qs "^tls-crypt" /etc/openvpn/server.conf && echo "1" || (grep -qs "^tls-auth" /etc/openvpn/server.conf && echo "2"))
+TLS_SIG=$(grep -qs "^tls-crypt" /etc/openvpn/server.conf && echo "1" || (grep -qs "^tls-auth" /etc/openvpn/server.conf && echo "2"))
 
     cp /etc/openvpn/client-template.txt "$homeDir/$CLIENT.ovpn" || { echo "Ошибка копирования шаблона"; exit 1; }
     {
@@ -703,7 +702,6 @@ function newClient() {
     } >> "$homeDir/$CLIENT.ovpn" || { echo "Ошибка создания .ovpn файла"; exit 1; }
 
     echo "Файл конфигурации сохранен в $homeDir/$CLIENT.ovpn."
-    echo "Скопируйте _default CCD для $CLIENT..."
     cp /etc/openvpn/ccd/_default /etc/openvpn/ccd/$CLIENT || { echo "Ошибка копирования CCD"; exit 1; }
     cat /etc/openvpn/ccd/$CLIENT
     echo "------------------------------------------------------------------------------"
