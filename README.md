@@ -1,4 +1,4 @@
-wget [https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip](https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip)
+wget [https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip](https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip) (BR)
 unzip main.zip
 cd myOpenVPN-main
 cd cmd 
