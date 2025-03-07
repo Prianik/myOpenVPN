@@ -10,6 +10,8 @@ HOME_DIR="${SERVER_DIR}/_OpenVPN_KEY"             # Директория для 
 CCD=$(grep "client-config-dir" "${SERVER_DIR}/server.conf" | awk '{print $2}')  # Путь к client-config-dir
 PASS=1                                            # По умолчанию сертификат без пароля
 CLIENT="$1"                                       # Имя клиента из аргумента командной строки
+RDP=$2
+CERT_EXPIRE=3650
 
 # Проверка на наличие server.conf
 if [ ! -f "${SERVER_DIR}/server.conf" ]; then
@@ -23,6 +25,7 @@ echo "Укажите имя для клиента."
 echo "Имя должно состоять из букв, цифр, символов '_' или '-'."
 until [[ "${CLIENT}" =~ ^[a-zA-Z0-9._-]+$ ]]; do
     read -rp "Имя клиента: " -e CLIENT
+    read -rp "RDP user: " -e RDP
 done
 
 # Создание директории для ключей, если её нет
@@ -66,16 +69,16 @@ fi
 
 # Генерация конфигурационного файла .ovpn для клиента
 OVPN_FILE="${HOME_DIR}/${CLIENT}.ovpn"
+
 if [ ! -f "${SERVER_DIR}/client-template.txt" ]; then
     echo "Ошибка: Шаблон ${SERVER_DIR}/client-template.txt не найден."
     exit 1
 fi
 
-cp "${SERVER_DIR}/client-template.txt" "${OVPN_FILE}" || {
-    echo "Ошибка: Не удалось скопировать шаблон в ${OVPN_FILE}";
-    exit 1;
-}
-
+echo "#" > "${OVPN_FILE}"
+echo "#---$CLIENT----$RDP--" >> "${OVPN_FILE}"
+echo "#" >> "${OVPN_FILE}"
+cat /etc/openvpn/client-template.txt >>  "${OVPN_FILE}"
 {
     echo "<ca>"
     cat "${SERVER_DIR}/easy-rsa/pki/ca.crt" || { echo "Ошибка: Не удалось прочитать ca.crt"; exit 1; }
