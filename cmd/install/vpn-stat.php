@@ -122,8 +122,8 @@ $note = '/etc/openvpn/note.txt';
             ?>
         </tbody>
     </table>
-
-    <?php
+<?php include 'restart_openvpn.php'; ?>
+<?php
 echo "<pre>--note--</pre>";
 $content = file_get_contents($note);
 
