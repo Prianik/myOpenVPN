@@ -1,4 +1,9 @@
 <!-- restart_openvpn.php -->
+
+<!--  Отредактируйте /etc/sudoers через visudo  -->
+<!--  Добавьте: www-data ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart openvpn  -->
+<!--  (замените www-data на пользователя вашего веб-сервера)  -->
+
 <div style="margin: 20px 0;">
     <button id="restart-openvpn" class="restart-btn">Перезагрузить OpenVPN</button>
     <span id="restart-status" style="margin-left: 10px;"></span>
