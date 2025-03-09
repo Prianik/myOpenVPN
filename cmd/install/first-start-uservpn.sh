@@ -71,6 +71,12 @@ if [ ! -f "${SERVER_DIR}/firma.txt" ]; then
     echo "Файл ${SERVER_DIR}/firma.txt создан."
 fi
 
+# Установка заметок для отчетов
+if [ ! -f "${SERVER_DIR}/note.txt" ]; then
+        echo "---" > "${SERVER_DIR}/note.txt" 
+    echo "Файл ${SERVER_DIR}/note.txt создан."
+fi
+
 # Создание символических ссылок
 # Проверяем существование исходных файлов перед созданием ссылок
 for script in "newClient.sh" "revokeClient.sh" "vpn-stat.sh" "vpn-user.sh"; do
