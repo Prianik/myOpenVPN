@@ -119,7 +119,9 @@ echo "Скачайте файл .ovpn и импортируйте его в ва
 
 # Добавление клиента в список активных пользователей
 echo "------------------------------------------------------------------------------"
-echo "${CLIENT} 1" >> "${USER_VPN_FILE}" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
+#echo "${CLIENT} 1" >> "${USER_VPN_FILE}" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
+echo "$CLIENT;1;$RDP" >>  "$USER_VPN_FILE" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
+
 
 # Удаление пустых строк из user-vpn.txt
 sed -i '/^$/d' "${USER_VPN_FILE}" || { echo "Ошибка обработки ${USER_VPN_FILE}"; exit 1; }
