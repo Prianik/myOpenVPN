@@ -1,6 +1,6 @@
 <?php
 $firma = file_get_contents('/etc/openvpn/firma.txt');
-$note = '/etc/openvpn/note.txt';
+//$note = '/etc/openvpn/note.txt';
 ?>
 
 <!DOCTYPE html>
@@ -91,7 +91,8 @@ $note = '/etc/openvpn/note.txt';
                 $users = [];
 
                 while (($line = fgets($file)) !== false) {
-                    $parts = explode(' ', trim($line), 3);
+#                    $parts = explode(' ', trim($line), 3);
+                    $parts = explode(';', trim($line), 3);
                     $username = $parts[0];
                     $status = $parts[1];
                     $notes = isset($parts[2]) ? trim($parts[2]) : '';
@@ -137,29 +138,15 @@ $note = '/etc/openvpn/note.txt';
         </tbody>
     </table>
 
-<?php //include 'disable_all.php'; ?>
+<?php echo "<BR>"; ?>
+
+<?php include 'openvpn_uptime.php'; ?>
 <?php include 'restart_openvpn.php'; ?>
 <?php include 'stop_openvpn.php'; ?>
 <?php include 'online_users.php'; ?>
+<?php //include 'online_users2.php'; ?>
+<?php include 'note.php'; ?>
 
-
-<?php
-echo "<pre>--note--</pre>";
-$content = file_get_contents($note);
-
-if ($content !== false) {
-    $lines = explode("\n", $content);
-    $filtered_lines = array_filter($lines, function($line) {
-        $trimmed = trim($line);
-        return !empty($trimmed) && !str_starts_with($trimmed, '#') && !str_starts_with($trimmed, '//');
-    });
-    sort($filtered_lines);
-    echo "<pre>" . htmlspecialchars(implode("\n", $filtered_lines)) . "</pre>";
-} else {
-    echo "Не удалось прочитать файл";
-}
-echo "<pre>---</pre>";
-?>
 
     <script>
         $(document).ready(function() {
@@ -181,5 +168,6 @@ echo "<pre>---</pre>";
             });
         });
     </script>
+
 </body>
 </html>
