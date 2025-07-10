@@ -1,4 +1,6 @@
+```
 apt update -y  && apt upgrade -y && apt install mc wget curl nano sockstat sudo chrony  htop -y && timedatectl set-timezone Europe/Moscow && systemctl enable chrony
+```
 <BR>
 
 wget [https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip](https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip)
