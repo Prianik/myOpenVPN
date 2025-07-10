@@ -14,7 +14,9 @@ if [ ! -f "$USER_LIST" ]; then
 fi
 
 # Ищем пользователя в файле
-USER_STATUS=$(grep "^$CLIENT_NAME " "$USER_LIST" | awk '{print $2}')
+#USER_STATUS=$(grep "^$CLIENT_NAME " "$USER_LIST" | awk '{print $2}')
+USER_STATUS=$(grep "^$CLIENT_NAME;" "$USER_LIST" | awk -F';' '{print $2}')
+
 
 # Если пользователь не найден, блокируем подключение
 if [ -z "$USER_STATUS" ]; then
