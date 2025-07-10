@@ -3,8 +3,9 @@ apt update -y  && apt upgrade -y && apt install mc wget curl nano sockstat sudo 
 ```
 <BR>
 
-`wget [https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip](https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip)`
+wget [https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip](https://github.com/Prianik/myOpenVPN/archive/refs/heads/main.zip)
 <BR>
+```
 unzip main.zip &&
 cd myOpenVPN-main &&
 cd cmd &&
@@ -16,3 +17,4 @@ cd ../.. &&
 cp -R cmd /etc/openvpn/ &&
 cd /etc/openvpn/cmd/install &&
 ./first-start-uservpn.sh
+```
