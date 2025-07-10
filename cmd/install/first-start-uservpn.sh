@@ -52,7 +52,8 @@ while read -r line; do
     [ -z "${CN}" ] && { echo "Предупреждение: Не удалось извлечь CN из строки: ${line}"; continue; }
 
     # Записываем пользователя в user-vpn.txt со статусом 1 (активен)
-    echo "${CN} 1" >> "${USER_VPN_FILE}" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
+    #echo "${CN} 1" >> "${USER_VPN_FILE}" || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
+    echo "${CN};1" >> "${USER_VPN_FILE}"  || { echo "Ошибка записи в ${USER_VPN_FILE}"; exit 1; }
 done < "${INDEX_FILE}"
 
 # Удаление пустых строк
