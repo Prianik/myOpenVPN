@@ -23,6 +23,11 @@ function getOnlineUsers($file_path) {
                     $assigned_ip = $columns[0];
                     $username    = $columns[1];
                     $real_address = explode(':', $columns[2])[0];
+                    
+                    // Пропускаем пользователей, которые начинаются на sector или ##
+                    if (strpos($username, 'sector') === 0 || strpos($username, '##') === 0) {
+                        continue;
+                    }
 
                     $online_users[$username] = [
                         'source_ip'   => $real_address,
@@ -43,9 +48,6 @@ $status_log_path = '/var/log/openvpn/status.log';
 $online_users = getOnlineUsers($status_log_path);
 
 if (!empty($online_users)) {
-    // Сортировка пользователей по имени
-    ksort($online_users);
-
     echo "<h2>Пользователи онлайн</h2>";
     echo "<table>";
     echo "<tr>
